@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSR CARGO MOVERS COMPANY - Transport Management System</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- LeafletJS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* Custom Styles for a professional feel */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #5574a3;
+        }
+        .dashboard-card {
+            background-color: rgb(168, 45, 45);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+        .btn-primary {
+            background-color: #1a73e8;
+            color: white;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 10px 20px;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #185abc;
+        }
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 2rem;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 12px;
+            position: relative;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        #map { 
+            height: 500px; 
+            border-radius: 12px;
+            z-index: 10;
+        }
+        .driver-view {
+            background: linear-gradient(135deg, #36517c 0%, #1a2a4c 100%);
+            color: white;
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Main Application Container -->
+    <div id="app">
+        <!-- Login/Selection Screen -->
+        <div id="selectionScreen" class="flex items-center justify-center min-h-screen bg-gray-100">
+            <div class="text-center p-8 bg-white rounded-xl shadow-2xl max-w-md w-full">
+                <h1 class="text-4xl font-extrabold text-gray-800 mb-2">SSR CARGO MOVERS</h1>
+                <p class="text-gray-600 mb-8">Your Trusted Transport Partner</p>
+                <div class="space-y-4">
+                    <button onclick="showView('admin')" class="w-full btn-primary flex items-center justify-center text-lg py-3">
+                        <i class="fas fa-user-shield mr-3"></i> Admin Dashboard
+                    </button>
+                    <button onclick="showView('driver')" class="w-full bg-gray-700 hover:bg-gray-800 text-white font-semibold flex items-center justify-center text-lg py-3 rounded-lg transition-colors">
+                        <i class="fas fa-truck-moving mr-3"></i> Driver Interface
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="adminView" class="hidden">
+            <div class="flex h-screen bg-gray-100">
+                <!-- Sidebar -->
+                <div class="w-64 bg-white shadow-md">
+                    <div class="p-6 text-center border-b">
+                        <h2 class="text-2xl font-bold text-gray-800">SSR CARGO</h2>
+                    </div>
+                    <nav class="mt-6">
+                        <a href="#" onclick="showAdminTab('dashboard')" class="admin-tab-link block px-6 py-3 text-gray-700 hover:bg-blue-50 font-semibold"><i class="fas fa-tachometer-alt w-6 mr-3"></i>Dashboard</a>
+                        <a href="#" onclick="showAdminTab('trips')" class="admin-tab-link block px-6 py-3 text-gray-700 hover:bg-blue-50 font-semibold"><i class="fas fa-route w-6 mr-3"></i>Manage Trips</a>
+                        <a href="#" onclick="showAdminTab('vehicles')" class="admin-tab-link block px-6 py-3 text-gray-700 hover:bg-blue-50 font-semibold"><i class="fas fa-truck w-6 mr-3"></i>Vehicles</a>
+                        <a href="#" onclick="showAdminTab('drivers')" class="admin-tab-link block px-6 py-3 text-gray-700 hover:bg-blue-50 font-semibold"><i class="fas fa-id-card w-6 mr-3"></i>Drivers</a>
+                        <a href="#" onclick="showView('selection')" class="block px-6 py-3 text-gray-700 hover:bg-red-50 font-semibold mt-12"><i class="fas fa-sign-out-alt w-6 mr-3"></i>Exit</a>
+                    </nav>
+                </div>
+
+                <!-- Main Content -->
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <header class="flex justify-between items-center p-4 bg-white border-b">
+                        <h1 id="adminHeader" class="text-2xl font-bold text-gray-800">Dashboard</h1>
+                        <button onclick="openModal('addTripModal')" class="btn-primary"><i class="fas fa-plus mr-2"></i>New Trip</button>
+                    </header>
+
+                    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200 p-6">
+                        <!-- Dashboard Tab -->
+                        <div id="dashboardTab" class="admin-tab-content">
+                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                                <div class="dashboard-card p-6">
+                                    <div class="flex items-center">
+                                        <div class="p-3 rounded-full bg-blue-100 text-blue-500 mr-4">
+                                            <i class="fas fa-truck-loading text-2xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-500">Active Trips</p>
+                                            <p id="activeTripsCount" class="text-3xl font-bold text-gray-800">0</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="dashboard-card p-6">
+                                    <div class="flex items-center">
+                                        <div class="p-3 rounded-full bg-green-100 text-green-500 mr-4">
+                                            <i class="fas fa-check-circle text-2xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-500">Completed</p>
+                                            <p id="completedTripsCount" class="text-3xl font-bold text-gray-800">0</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="dashboard-card p-6">
+                                    <div class="flex items-center">
+                                        <div class="p-3 rounded-full bg-yellow-100 text-yellow-500 mr-4">
+                                            <i class="fas fa-truck-pickup text-2xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-500">Total Vehicles</p>
+                                            <p id="totalVehiclesCount" class="text-3xl font-bold text-gray-800">0</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                 <div class="dashboard-card p-6">
+                                    <div class="flex items-center">
+                                        <div class="p-3 rounded-full bg-red-100 text-red-500 mr-4">
+                                            <i class="fas fa-users text-2xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-500">Total Drivers</p>
+                                            <p id="totalDriversCount" class="text-3xl font-bold text-gray-800">0</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dashboard-card p-4">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4">Live Vehicle Tracking</h3>
+                                <div id="map"></div>
+                            </div>
+                        </div>
+
+                        <!-- Trips Tab -->
+                        <div id="tripsTab" class="admin-tab-content hidden">
+                           <div class="dashboard-card overflow-hidden">
+                                <table class="min-w-full bg-white">
+                                    <thead class="bg-gray-800 text-white">
+                                        <tr>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Trip ID</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Driver</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Vehicle</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Route</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Status</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tripsTableBody" class="text-gray-700">
+                                        <!-- Trip rows will be injected here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Vehicles Tab -->
+                        <div id="vehiclesTab" class="admin-tab-content hidden">
+                            <button onclick="openModal('addVehicleModal')" class="btn-primary mb-4"><i class="fas fa-plus mr-2"></i>Add Vehicle</button>
+                            <div class="dashboard-card overflow-hidden">
+                                <table class="min-w-full bg-white">
+                                     <thead class="bg-gray-800 text-white">
+                                        <tr>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Reg. No</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Type</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Capacity (Tons)</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Owner</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vehiclesTableBody" class="text-gray-700">
+                                        <!-- Vehicle rows will be injected here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Drivers Tab -->
+                        <div id="driversTab" class="admin-tab-content hidden">
+                             <button onclick="openModal('addDriverModal')" class="btn-primary mb-4"><i class="fas fa-plus mr-2"></i>Add Driver</button>
+                            <div class="dashboard-card overflow-hidden">
+                                <table class="min-w-full bg-white">
+                                     <thead class="bg-gray-800 text-white">
+                                        <tr>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Driver ID</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Name</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Phone</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">License No.</th>
+                                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Assigned Vehicle</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="driversTableBody" class="text-gray-700">
+                                        <!-- Driver rows will be injected here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        </div>
+
+        <!-- Driver Mobile View -->
+        <div id="driverView" class="hidden driver-view p-6">
+            <div class="max-w-md mx-auto">
+                <div class="flex justify-between items-center mb-6">
+                     <h1 class="text-3xl font-bold">Driver Mode</h1>
+                     <button onclick="showView('selection')" class="text-red-300 hover:text-white"><i class="fas fa-sign-out-alt fa-lg"></i></button>
+                </div>
+               
+                <div class="bg-white/10 p-6 rounded-2xl shadow-lg mb-6">
+                    <label for="driverSelect" class="block text-sm font-medium text-gray-300 mb-2">Select Your Profile</label>
+                    <select id="driverSelect" class="w-full bg-white/20 border-0 rounded-lg py-3 px-4 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-400">
+                        <option>Select Driver</option>
+                    </select>
+                </div>
+
+                <div id="driverTripDetails" class="hidden">
+                    <h2 class="text-2xl font-semibold mb-4 text-center">Current Assignment</h2>
+                    <div id="no-trip-assigned" class="text-center py-8 bg-white/10 rounded-2xl">
+                        <i class="fas fa-info-circle text-4xl text-blue-300 mb-4"></i>
+                        <p class="text-lg">No trip assigned currently.</p>
+                    </div>
+                    <div id="trip-card" class="hidden bg-white/10 p-6 rounded-2xl shadow-lg space-y-4">
+                        <div>
+                            <p class="text-sm text-gray-300">Route</p>
+                            <p id="driver-trip-route" class="text-xl font-bold"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-300">Vehicle</p>
+                            <p id="driver-trip-vehicle" class="text-lg font-semibold"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-300">Material</p>
+                            <p id="driver-trip-material" class="text-lg"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-300">Expected Delivery</p>
+                            <p id="driver-trip-delivery" class="text-lg"></p>
+                        </div>
+                         <div class="pt-4">
+                            <label for="tripStatusSelect" class="block text-sm font-medium text-gray-300 mb-2">Update Status</label>
+                            <select id="tripStatusSelect" class="w-full bg-white/20 border-0 rounded-lg py-3 px-4 text-white">
+                                <option value="Pending">Pending</option>
+                                <option value="In Transit">In Transit</option>
+                                <option value="Delivered">Delivered</option>
+                            </select>
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modals -->
+    <!-- Add Trip Modal -->
+    <div id="addTripModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('addTripModal')">&times;</span>
+            <h2 class="text-2xl font-bold mb-6">Create New Trip</h2>
+            <form id="addTripForm">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" id="tripOrigin" placeholder="Origin City" class="w-full p-2 border rounded" required>
+                    <input type="text" id="tripDestination" placeholder="Destination City" class="w-full p-2 border rounded" required>
+                    <select id="tripDriver" class="w-full p-2 border rounded" required><option>Select Driver</option></select>
+                    <select id="tripVehicle" class="w-full p-2 border rounded" required><option>Select Vehicle</option></select>
+                    <input type="text" id="tripMaterial" placeholder="Material Type" class="w-full p-2 border rounded" required>
+                    <input type="number" id="tripWeight" placeholder="Material Weight (Tons)" class="w-full p-2 border rounded" required>
+                    <input type="datetime-local" id="tripDeliveryTime" class="w-full p-2 border rounded col-span-2" required>
+                </div>
+                <button type="submit" class="btn-primary mt-6 w-full">Add Trip</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Add Vehicle Modal -->
+    <div id="addVehicleModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('addVehicleModal')">&times;</span>
+            <h2 class="text-2xl font-bold mb-6">Add New Vehicle</h2>
+            <form id="addVehicleForm">
+                <div class="space-y-4">
+                    <input type="text" id="vehicleRegNo" placeholder="Registration Number (e.g., TN 01 AB 1234)" class="w-full p-2 border rounded" required>
+                    <input type="text" id="vehicleType" placeholder="Vehicle Type (e.g., 12 Wheeler Truck)" class="w-full p-2 border rounded" required>
+                    <input type="number" id="vehicleCapacity" placeholder="Capacity (in Tons)" class="w-full p-2 border rounded" required>
+                    <input type="text" id="vehicleOwner" placeholder="Owner Name / Company" class="w-full p-2 border rounded" required>
+                </div>
+                <button type="submit" class="btn-primary mt-6 w-full">Add Vehicle</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Driver Modal -->
+    <div id="addDriverModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('addDriverModal')">&times;</span>
+            <h2 class="text-2xl font-bold mb-6">Add New Driver</h2>
+            <form id="addDriverForm">
+                <div class="space-y-4">
+                    <input type="text" id="driverName" placeholder="Driver's Full Name" class="w-full p-2 border rounded" required>
+                    <input type="tel" id="driverPhone" placeholder="Phone Number" class="w-full p-2 border rounded" required>
+                    <input type="text" id="driverLicense" placeholder="Driving License Number" class="w-full p-2 border rounded" required>
+                </div>
+                <button type="submit" class="btn-primary mt-6 w-full">Add Driver</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Trip Details Modal -->
+    <div id="tripDetailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('tripDetailsModal')">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">Trip Details</h2>
+            <div id="tripDetailsContent" class="space-y-3 text-gray-700"></div>
+            <div class="mt-6 border-t pt-4">
+                 <h3 class="text-lg font-semibold mb-2">Delivery Progress</h3>
+                 <div class="w-full bg-gray-200 rounded-full h-4">
+                    <div id="tripProgressBar" class="bg-blue-600 h-4 rounded-full" style="width: 0%"></div>
+                 </div>
+                 <p id="tripTime" class="text-sm text-gray-500 mt-2 text-center"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getFirestore, collection, addDoc, getDocs, onSnapshot, doc, updateDoc 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        
+        // --- FIREBASE CONFIGURATION ---
+        // IMPORTANT: Replace with your actual Firebase project configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyB2e6Y77brsBZLvbGZ2POyWBWTrLkY-xQA",
+  authDomain: "ssr-cargo-movers.firebaseapp.com",
+  projectId: "ssr-cargo-movers",
+  storageBucket: "ssr-cargo-movers.firebasestorage.app",
+  messagingSenderId: "458664811234",
+  appId: "1:458664811234:web:c73d88612f8afe49541cbb",
+  measurementId: "G-V1P2GBR51V"
+};
+
+        // Initialize Firebase
+        let app, db, auth;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            // Sign in anonymously
+            await signInAnonymously(auth);
+            console.log("Firebase Initialized and User Signed In Anonymously");
+        } catch (error) {
+            console.error("Firebase initialization failed:", error);
+            alert("Could not connect to the database. Please check your Firebase configuration in the HTML file.");
+            // You can replace the placeholder config above with a valid one to run the app.
+        }
+
+        // --- GLOBAL STATE ---
+        let map;
+        let vehicleMarkers = {};
+        const state = {
+            drivers: [],
+            vehicles: [],
+            trips: [],
+        };
+
+        // --- UI MANAGEMENT ---
+        window.showView = (viewName) => {
+            ['selectionScreen', 'adminView', 'driverView'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById(viewName + 'Screen')?.classList.remove('hidden');
+            document.getElementById(viewName + 'View')?.classList.remove('hidden');
+            if(viewName === 'admin') initializeAdminView();
+            if(viewName === 'driver') initializeDriverView();
+        };
+
+        window.showAdminTab = (tabName) => {
+            document.querySelectorAll('.admin-tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            
+            document.querySelectorAll('.admin-tab-link').forEach(link => link.classList.remove('bg-blue-100', 'text-blue-600'));
+            document.querySelector(`a[onclick="showAdminTab('${tabName}')"]`).classList.add('bg-blue-100', 'text-blue-600');
+            
+            document.getElementById('adminHeader').textContent = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+        };
+        
+        window.openModal = (modalId) => document.getElementById(modalId).style.display = 'block';
+        window.closeModal = (modalId) => document.getElementById(modalId).style.display = 'none';
+
+        // --- INITIALIZATION ---
+        function initializeAdminView() {
+            if(!map) {
+                map = L.map('map').setView([20.5937, 78.9629], 5); // Centered on India
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+            }
+            showAdminTab('dashboard');
+        }
+
+        function initializeDriverView() {
+            populateDriverDropdown();
+        }
+
+        // --- DATA RENDERING FUNCTIONS ---
+        function renderTrips() {
+            const tableBody = document.getElementById('tripsTableBody');
+            tableBody.innerHTML = '';
+            state.trips.forEach(trip => {
+                const driver = state.drivers.find(d => d.id === trip.driverId) || { name: 'N/A' };
+                const vehicle = state.vehicles.find(v => v.id === trip.vehicleId) || { regNo: 'N/A' };
+                const row = `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-4">${trip.id.substring(0, 8)}</td>
+                        <td class="py-3 px-4">${driver.name}</td>
+                        <td class="py-3 px-4">${vehicle.regNo}</td>
+                        <td class="py-3 px-4">${trip.origin} to ${trip.destination}</td>
+                        <td class="py-3 px-4"><span class="px-2 py-1 font-semibold leading-tight text-xs rounded-full ${getStatusColor(trip.status)}">${trip.status}</span></td>
+                        <td class="py-3 px-4">
+                            <button onclick="viewTripDetails('${trip.id}')" class="text-blue-500 hover:text-blue-700"><i class="fas fa-eye"></i></button>
+                        </td>
+                    </tr>`;
+                tableBody.innerHTML += row;
+            });
+            updateDashboardCounts();
+        }
+        
+        function renderVehicles() {
+            const tableBody = document.getElementById('vehiclesTableBody');
+            tableBody.innerHTML = '';
+            state.vehicles.forEach(v => {
+                 const isAssigned = state.trips.some(t => t.vehicleId === v.id && t.status !== 'Delivered');
+                 const status = isAssigned ? 'On Trip' : 'Available';
+                 const statusColor = isAssigned ? 'text-red-700 bg-red-100' : 'text-green-700 bg-green-100';
+                 const row = `
+                    <tr class="border-b">
+                        <td class="py-3 px-4">${v.regNo}</td>
+                        <td class="py-3 px-4">${v.type}</td>
+                        <td class="py-3 px-4">${v.capacity}</td>
+                        <td class="py-3 px-4">${v.owner}</td>
+                        <td class="py-3 px-4"><span class="px-2 py-1 font-semibold leading-tight text-xs rounded-full ${statusColor}">${status}</span></td>
+                    </tr>`;
+                tableBody.innerHTML += row;
+            });
+            populateVehicleDropdowns();
+            document.getElementById('totalVehiclesCount').textContent = state.vehicles.length;
+        }
+
+        function renderDrivers() {
+            const tableBody = document.getElementById('driversTableBody');
+            tableBody.innerHTML = '';
+            state.drivers.forEach(d => {
+                const assignedTrip = state.trips.find(t => t.driverId === d.id && t.status !== 'Delivered');
+                const vehicle = assignedTrip ? state.vehicles.find(v => v.id === assignedTrip.vehicleId) : null;
+                const assignedVehicle = vehicle ? vehicle.regNo : 'N/A';
+                const row = `
+                    <tr class="border-b">
+                        <td class="py-3 px-4">${d.id.substring(0,8)}</td>
+                        <td class="py-3 px-4">${d.name}</td>
+                        <td class="py-3 px-4">${d.phone}</td>
+                        <td class="py-3 px-4">${d.license}</td>
+                        <td class="py-3 px-4">${assignedVehicle}</td>
+                    </tr>`;
+                tableBody.innerHTML += row;
+            });
+            populateDriverDropdowns();
+            document.getElementById('totalDriversCount').textContent = state.drivers.length;
+        }
+
+        function updateDashboardCounts() {
+            const activeTrips = state.trips.filter(t => t.status === 'In Transit').length;
+            const completedTrips = state.trips.filter(t => t.status === 'Delivered').length;
+            document.getElementById('activeTripsCount').textContent = activeTrips;
+            document.getElementById('completedTripsCount').textContent = completedTrips;
+        }
+        
+        // --- DATA FETCHING & LISTENING (FIRESTORE) ---
+        function listenToCollections() {
+            if (!db) return;
+            onSnapshot(collection(db, "drivers"), (snapshot) => {
+                state.drivers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderDrivers();
+            });
+             onSnapshot(collection(db, "vehicles"), (snapshot) => {
+                state.vehicles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderVehicles();
+            });
+             onSnapshot(collection(db, "trips"), (snapshot) => {
+                state.trips = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderTrips();
+                updateVehicleLocations();
+            });
+        }
+        
+        listenToCollections();
+
+        // --- FORM HANDLING ---
+        document.getElementById('addTripForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newTrip = {
+                origin: document.getElementById('tripOrigin').value,
+                destination: document.getElementById('tripDestination').value,
+                driverId: document.getElementById('tripDriver').value,
+                vehicleId: document.getElementById('tripVehicle').value,
+                material: document.getElementById('tripMaterial').value,
+                weight: parseFloat(document.getElementById('tripWeight').value),
+                deliveryTime: new Date(document.getElementById('tripDeliveryTime').value).toISOString(),
+                startTime: new Date().toISOString(),
+                status: 'Pending',
+                location: { lat: 20.5937, lng: 78.9629 } // Default start location
+            };
+            try {
+                await addDoc(collection(db, "trips"), newTrip);
+                closeModal('addTripModal');
+                e.target.reset();
+            } catch(error) { console.error("Error adding trip: ", error); }
+        });
+        
+         document.getElementById('addVehicleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newVehicle = {
+                regNo: document.getElementById('vehicleRegNo').value,
+                type: document.getElementById('vehicleType').value,
+                capacity: parseFloat(document.getElementById('vehicleCapacity').value),
+                owner: document.getElementById('vehicleOwner').value,
+            };
+            try {
+                await addDoc(collection(db, "vehicles"), newVehicle);
+                closeModal('addVehicleModal');
+                e.target.reset();
+            } catch(error) { console.error("Error adding vehicle: ", error); }
+        });
+        
+         document.getElementById('addDriverForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newDriver = {
+                name: document.getElementById('driverName').value,
+                phone: document.getElementById('driverPhone').value,
+                license: document.getElementById('driverLicense').value,
+            };
+            try {
+                await addDoc(collection(db, "drivers"), newDriver);
+                closeModal('addDriverModal');
+                e.target.reset();
+            } catch(error) { console.error("Error adding driver: ", error); }
+        });
+
+        // --- HELPER FUNCTIONS ---
+        function populateDriverDropdowns() {
+            const tripDriverSelect = document.getElementById('tripDriver');
+            tripDriverSelect.innerHTML = '<option value="">Select Driver</option>';
+            state.drivers.forEach(d => {
+                const isAssigned = state.trips.some(t => t.driverId === d.id && t.status !== 'Delivered');
+                if(!isAssigned) {
+                    tripDriverSelect.innerHTML += `<option value="${d.id}">${d.name}</option>`;
+                }
+            });
+        }
+
+        function populateVehicleDropdowns() {
+            const tripVehicleSelect = document.getElementById('tripVehicle');
+            tripVehicleSelect.innerHTML = '<option value="">Select Vehicle</option>';
+            state.vehicles.forEach(v => {
+                const isAssigned = state.trips.some(t => t.vehicleId === v.id && t.status !== 'Delivered');
+                if(!isAssigned) {
+                    tripVehicleSelect.innerHTML += `<option value="${v.id}">${v.regNo} (${v.type})</option>`;
+                }
+            });
+        }
+
+        function populateDriverDropdown() {
+             const driverSelect = document.getElementById('driverSelect');
+             driverSelect.innerHTML = '<option value="">Select Your Profile</option>';
+             state.drivers.forEach(d => {
+                 driverSelect.innerHTML += `<option value="${d.id}">${d.name}</option>`;
+             });
+        }
+        
+        function getStatusColor(status) {
+            switch (status) {
+                case 'In Transit': return 'bg-blue-100 text-blue-800';
+                case 'Delivered': return 'bg-green-100 text-green-800';
+                case 'Pending': return 'bg-yellow-100 text-yellow-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        // --- MAP & LOCATION LOGIC ---
+        function updateVehicleLocations() {
+             state.trips.forEach(trip => {
+                if (trip.status === 'In Transit' && trip.location) {
+                    const vehicle = state.vehicles.find(v => v.id === trip.vehicleId);
+                    if (!vehicle) return;
+
+                    const latLng = [trip.location.lat, trip.location.lng];
+                    const popupContent = `<b>${vehicle.regNo}</b><br>Driver: ${state.drivers.find(d => d.id === trip.driverId)?.name}<br>Status: ${trip.status}`;
+                    
+                    if (vehicleMarkers[trip.id]) {
+                        vehicleMarkers[trip.id].setLatLng(latLng).setPopupContent(popupContent);
+                    } else {
+                        const truckIcon = L.divIcon({
+                            html: '<i class="fas fa-truck-moving fa-2x text-blue-600"></i>',
+                            className: 'bg-transparent border-0',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        });
+
+                        vehicleMarkers[trip.id] = L.marker(latLng, {icon: truckIcon}).addTo(map)
+                            .bindPopup(popupContent);
+                    }
+                } else if (vehicleMarkers[trip.id]) {
+                    map.removeLayer(vehicleMarkers[trip.id]);
+                    delete vehicleMarkers[trip.id];
+                }
+            });
+        }
+        
+        // --- TRIP DETAILS MODAL ---
+        window.viewTripDetails = (tripId) => {
+            const trip = state.trips.find(t => t.id === tripId);
+            if (!trip) return;
+            
+            const driver = state.drivers.find(d => d.id === trip.driverId) || {};
+            const vehicle = state.vehicles.find(v => v.id === trip.vehicleId) || {};
+            
+            const content = `
+                <p><strong>Trip ID:</strong> ${trip.id.substring(0,8)}</p>
+                <p><strong>Route:</strong> ${trip.origin} to ${trip.destination}</p>
+                <p><strong>Driver:</strong> ${driver.name || 'N/A'} (${driver.phone || 'N/A'})</p>
+                <p><strong>Vehicle:</strong> ${vehicle.regNo || 'N/A'} (${vehicle.type || 'N/A'})</p>
+                <p><strong>Material:</strong> ${trip.material} (${trip.weight} Tons)</p>
+                <p><strong>Status:</strong> <span class="font-semibold ${getStatusColor(trip.status).replace('bg-', 'text-')}">${trip.status}</span></p>
+            `;
+            document.getElementById('tripDetailsContent').innerHTML = content;
+            
+            // Progress Bar Logic
+            const startTime = new Date(trip.startTime);
+            const deliveryTime = new Date(trip.deliveryTime);
+            const now = new Date();
+            
+            let progress = 0;
+            if (now >= deliveryTime || trip.status === 'Delivered') {
+                progress = 100;
+            } else if (now > startTime) {
+                progress = ((now - startTime) / (deliveryTime - startTime)) * 100;
+            }
+            
+            document.getElementById('tripProgressBar').style.width = `${Math.min(progress, 100).toFixed(0)}%`;
+            document.getElementById('tripTime').textContent = `Expected by: ${deliveryTime.toLocaleString()}`;
+
+            openModal('tripDetailsModal');
+        }
+
+        // --- DRIVER VIEW LOGIC ---
+        document.getElementById('driverSelect').addEventListener('change', (e) => {
+            const driverId = e.target.value;
+            document.getElementById('driverTripDetails').classList.remove('hidden');
+            if (driverId) {
+                const assignedTrip = state.trips.find(t => t.driverId === driverId && t.status !== 'Delivered');
+                if(assignedTrip) {
+                    displayDriverTrip(assignedTrip);
+                    // Simulate location updates
+                    simulateGps(assignedTrip.id);
+                } else {
+                    document.getElementById('no-trip-assigned').classList.remove('hidden');
+                    document.getElementById('trip-card').classList.add('hidden');
+                }
+            }
+        });
+
+        document.getElementById('tripStatusSelect').addEventListener('change', async (e) => {
+            const newStatus = e.target.value;
+            const tripId = e.target.dataset.tripId;
+            if (tripId && newStatus) {
+                const tripRef = doc(db, "trips", tripId);
+                await updateDoc(tripRef, { status: newStatus });
+                console.log(`Trip ${tripId} status updated to ${newStatus}`);
+            }
+        });
+
+        function displayDriverTrip(trip) {
+            document.getElementById('no-trip-assigned').classList.add('hidden');
+            document.getElementById('trip-card').classList.remove('hidden');
+
+            const vehicle = state.vehicles.find(v => v.id === trip.vehicleId);
+            document.getElementById('driver-trip-route').textContent = `${trip.origin} → ${trip.destination}`;
+            document.getElementById('driver-trip-vehicle').textContent = vehicle ? `${vehicle.regNo} (${vehicle.type})` : 'N/A';
+            document.getElementById('driver-trip-material').textContent = `${trip.material} (${trip.weight} tons)`;
+            document.getElementById('driver-trip-delivery').textContent = new Date(trip.deliveryTime).toLocaleString();
+            
+            const statusSelect = document.getElementById('tripStatusSelect');
+            statusSelect.value = trip.status;
+            statusSelect.dataset.tripId = trip.id;
+        }
+
+        let gpsInterval;
+        function simulateGps(tripId) {
+            if (gpsInterval) clearInterval(gpsInterval);
+
+            gpsInterval = setInterval(async () => {
+                const tripRef = doc(db, "trips", tripId);
+                const currentTrip = state.trips.find(t => t.id === tripId);
+                
+                // Stop simulation if trip is delivered
+                if (!currentTrip || currentTrip.status === 'Delivered') {
+                    clearInterval(gpsInterval);
+                    return;
+                }
+
+                // Only move if 'In Transit'
+                if(currentTrip.status === 'In Transit') {
+                    const newLat = currentTrip.location.lat + (Math.random() - 0.5) * 0.1;
+                    const newLng = currentTrip.location.lng + (Math.random() - 0.5) * 0.1;
+                    await updateDoc(tripRef, {
+                        location: { lat: newLat, lng: newLng }
+                    });
+                }
+            }, 5000); // Update every 5 seconds
+        }
+
+    </script>
+</body>
+</html>
